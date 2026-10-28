@@ -2,10 +2,8 @@
 
 A shared inbox, broadcasts and automations on the official **WhatsApp Cloud API**.
 
-```
 server/   Node.js + Express + Prisma + Socket.io   (API, webhook, real-time)  :4000
 web/      Next.js + Tailwind                        (login, inbox, settings)    :3000
-```
 
 ## Run locally
 
