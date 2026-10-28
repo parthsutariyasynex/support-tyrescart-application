@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "267302475370",
+    "project_id": "tyrescart-support",
+    "storage_bucket": "tyrescart-support.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:267302475370:android:c3d79edea57a941b04dc13",
+        "android_client_info": {
+          "package_name": "tech.synex.tyrescart_support"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD36WHWoJ-CF6HS-KUeL5lS9V_-nsVq2bQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

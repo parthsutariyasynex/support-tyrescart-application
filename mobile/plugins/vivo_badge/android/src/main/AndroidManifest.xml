@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Vivo's launcher accepts icon numbers only from apps holding this -->
+    <uses-permission android:name="com.vivo.notification.permission.BADGE_ICON" />
+</manifest>
