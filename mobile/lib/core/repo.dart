@@ -182,13 +182,59 @@ class Repo {
     await _g(r'mutation MarkRead($id: ID!) { markConversationRead(id: $id) { id unread } }', {'id': id});
   }
 
-  Future<Message> sendText(String conversationId, String body, {String? replyToId}) async => Message.fromJson(
+  /// aiGenerated: the text came from AI Reply (confirmed in "Send this AI reply?"); the server marks it ai_reply
+  Future<Message> sendText(String conversationId, String body, {String? replyToId, bool aiGenerated = false}) async => Message.fromJson(
     Map<String, dynamic>.from(
       (await _g('mutation SendText(\$input: SendTextInput!) { sendTextMessage(input: \$input) { $_messageFields } }', {
-        'input': {'conversationId': conversationId, 'body': body, 'replyToId': ?replyToId},
+        'input': {'conversationId': conversationId, 'body': body, 'replyToId': ?replyToId, if (aiGenerated) 'aiGenerated': true},
       }))['sendTextMessage'],
     ),
   );
+
+  // ---------------------------------------------------------------- AI Assistant (server: services/ai.ts)
+  // Everything AI runs on the server; the app only asks for a summary or a reply suggestion.
+
+  final Map<String, Future<bool>> _aiConfigured = {};
+
+  /// Whether the server has AI set up (AI Reply / AI Summary show only then); asked once per server. A server
+  /// without the AI Assistant (or a failed request) counts as off, and is asked again next time.
+  Future<bool> aiConfigured() {
+    final server = api.baseUrl;
+    return _aiConfigured[server] ??= _g('query AiConfigured { aiConfigured }').then(
+      (d) => d['aiConfigured'] == true,
+      onError: (_) {
+        _aiConfigured.remove(server);
+        return false;
+      },
+    );
+  }
+
+  static const _summaryFields = 'id conversationId summary lastMessageId createdAt updatedAt createdByName updatedByName upToDate addedMessages';
+
+  /// The chat's saved AI Summary (owners, admins and supervisors); null before the first one
+  Future<ConversationSummary?> conversationSummary(String conversationId) async {
+    final s = (await _g(
+      'query ConversationSummary(\$conversationId: ID!) { conversationSummary(conversationId: \$conversationId) { $_summaryFields } }',
+      {'conversationId': conversationId},
+    ))['conversationSummary'];
+    return s is Map ? ConversationSummary.fromJson(Map<String, dynamic>.from(s)) : null;
+  }
+
+  /// Generate, or Regenerate (rewrites the saved one)
+  Future<ConversationSummary> generateConversationSummary(String conversationId) async => ConversationSummary.fromJson(
+    Map<String, dynamic>.from(
+      (await _g(
+        'mutation GenerateConversationSummary(\$conversationId: ID!) { generateConversationSummary(conversationId: \$conversationId) { $_summaryFields } }',
+        {'conversationId': conversationId},
+      ))['generateConversationSummary'],
+    ),
+  );
+
+  /// A reply to edit; nothing is saved or sent
+  Future<String> suggestReply(String conversationId) async =>
+      (await _g(r'mutation SuggestReply($conversationId: ID!) { suggestReply(conversationId: $conversationId) }', {'conversationId': conversationId}))['suggestReply']
+          as String? ??
+      '';
 
   /// Photo (JPEG/PNG) or document: the file is the body, as the website sends it
   Future<Message> sendFile(

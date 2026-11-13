@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_badge.dart';
+import '../core/app_branding.dart';
 import '../core/media_cache.dart';
 import '../core/push.dart';
 import '../core/session.dart';
@@ -142,7 +143,7 @@ class _SupportAppState extends State<SupportApp> {
     return Listener(
       onPointerDown: (_) => _activity(),
       child: MaterialApp(
-        title: 'TyresCart Support',
+        title: AppBranding.appName,
         debugShowCheckedModeBanner: false,
         navigatorKey: navigatorKey,
         scaffoldMessengerKey: messengerKey,

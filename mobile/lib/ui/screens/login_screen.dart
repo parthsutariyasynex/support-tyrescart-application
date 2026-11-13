@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api.dart';
+import '../../core/app_branding.dart';
 import '../../core/session.dart';
 import '../widgets/common.dart';
 
@@ -91,12 +92,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             border: Border.all(color: scheme.outlineVariant),
                           ),
                           padding: const EdgeInsets.all(8),
-                          child: Image.asset('assets/icon/launcher_kl.png', fit: BoxFit.contain, semanticLabel: 'KL'),
+                          child: Image.asset(AppBranding.logoAsset, fit: BoxFit.contain, semanticLabel: AppBranding.appName),
                         ),
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Text('TyresCart Support', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(AppBranding.appName, textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 6),
                     Text('Sign in with your team account', textAlign: TextAlign.center, style: TextStyle(color: scheme.outline)),
                     const SizedBox(height: 28),

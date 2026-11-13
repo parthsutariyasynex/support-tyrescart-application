@@ -13,12 +13,6 @@ import 'repo.dart';
 /// It's the website's address: its Next.js server forwards /graphql, /socket.io and the file routes to the API.
 const definedServer = String.fromEnvironment('API_BASE_URL');
 
-/// The live support website, used by every build unless API_BASE_URL says otherwise
-const liveServer = 'https://connect.tyrescart.ae';
-
-/// Without API_BASE_URL the app uses the live server (debug and release alike)
-final String builtInServer = definedServer.isNotEmpty ? definedServer : liveServer;
-
 String normalizeServer(String raw) {
   var s = raw.trim();
   if (s.isEmpty) return s;
@@ -28,6 +22,12 @@ String normalizeServer(String raw) {
   }
   return s;
 }
+
+/// The live support website, used by every build unless API_BASE_URL says otherwise
+const liveServer = 'https://crm.tyresvision.com';
+
+/// Without API_BASE_URL the app uses the live server (debug and release alike)
+final String builtInServer = normalizeServer(definedServer.isNotEmpty ? definedServer : liveServer);
 
 enum SessionState { loading, signedOut, signedIn }
 

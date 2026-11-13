@@ -90,9 +90,11 @@ flutter_launcher_icons:
 # The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
+  # Build flavors: live (default), demo, crm, each with its env file (env/README.md)
+  default-flavor: live
   assets:
     - assets/sounds/
-    - assets/icon/launcher_kl.png
+    - assets/icon/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

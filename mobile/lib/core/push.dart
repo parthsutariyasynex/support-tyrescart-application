@@ -8,6 +8,7 @@ import 'package:flutter/painting.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'app_badge.dart';
+import 'app_branding.dart';
 import 'session.dart';
 
 // Push notifications (Firebase Cloud Messaging) for when the app is in the background or closed. The server sends them
@@ -58,7 +59,7 @@ String? conversationOf(Map<String, dynamic> data) {
   final t = text(title) ?? text(data['title']);
   final b = text(body) ?? text(data['body']) ?? text(data['message']);
   if (t == null && b == null) return null;
-  return (title: t ?? 'TyresCart Support', body: b ?? '');
+  return (title: t ?? AppBranding.appName, body: b ?? '');
 }
 
 /// Shows a data-only push on the phone, like the system shows one with a notification part: the "Messages" channel,

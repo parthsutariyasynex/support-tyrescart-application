@@ -468,3 +468,33 @@ class WorkspaceSummary {
   final String id, name, role;
   factory WorkspaceSummary.fromJson(Map<String, dynamic> j) => WorkspaceSummary(id: j['id'], name: j['name'] ?? '', role: j['role'] ?? 'agent');
 }
+
+/// A chat's AI Summary (server: services/ai.ts), one per chat; Regenerate adds the messages after its checkpoint
+class ConversationSummary {
+  ConversationSummary({
+    required this.id,
+    required this.conversationId,
+    required this.summary,
+    required this.updatedAt,
+    required this.upToDate,
+    this.updatedByName,
+    this.addedMessages,
+  });
+  final String id, conversationId, summary;
+  final DateTime updatedAt;
+  final String? updatedByName;
+  /// false once newer messages came in after it was made
+  final bool upToDate;
+  /// After Generate/Regenerate: how many messages that run added (0: nothing new, the AI wasn't asked); null when read
+  final int? addedMessages;
+
+  factory ConversationSummary.fromJson(Map<String, dynamic> j) => ConversationSummary(
+        id: '${j['id']}',
+        conversationId: j['conversationId'] ?? '',
+        summary: j['summary'] ?? '',
+        updatedAt: _date(j['updatedAt']) ?? DateTime.now().toUtc(),
+        updatedByName: _str(j['updatedByName']),
+        upToDate: j['upToDate'] != false,
+        addedMessages: (j['addedMessages'] as num?)?.toInt(),
+      );
+}

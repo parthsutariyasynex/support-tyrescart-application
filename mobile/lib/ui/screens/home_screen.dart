@@ -6,6 +6,7 @@ import 'package:mime/mime.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/app_branding.dart';
 import '../../core/repo.dart';
 import '../../core/session.dart';
 import '../../logic/rules.dart';
@@ -425,7 +426,7 @@ class _ChatsTabState extends State<_ChatsTab> {
                   foregroundColor: Theme.of(context).colorScheme.onSurface,
                   automaticallyImplyLeading: false,
                   title: Text(
-                    'TyresCart Support',
+                    AppBranding.appName,
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 22, color: context.chat.homeTitle),
                   ),
                   actions: [
@@ -586,7 +587,7 @@ class _HomeBannerState extends State<_HomeBanner> with WidgetsBindingObserver {
       onTap = () async {
         final ok = await context.read<Alerts>().requestNotifications();
         if (mounted) setState(() => _notificationsAllowed = ok);
-        if (!ok && context.mounted) showMessage(context, 'Allow notifications for TyresCart Support in the phone\'s Settings → Apps.');
+        if (!ok && context.mounted) showMessage(context, 'Allow notifications for ${AppBranding.appName} in the phone\'s Settings → Apps.');
       };
     } else if (session.state == SessionState.signedIn && session.workspaceId != null && session.whatsappPhone == null && !_dismissed.contains('whatsapp')) {
       key = 'whatsapp';

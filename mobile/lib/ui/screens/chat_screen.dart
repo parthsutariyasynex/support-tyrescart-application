@@ -21,6 +21,7 @@ import '../../state/workspace_data.dart';
 import '../theme.dart';
 import '../widgets/bubbles.dart';
 import '../widgets/common.dart';
+import 'ai_sheets.dart';
 import 'chat_sheets.dart';
 import 'contact_screen.dart';
 import 'template_sheet.dart';
@@ -64,6 +65,11 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<_NoteFile> _noteFiles = [];
   final Map<String, String> _pickedMentions = {}; // user id → name
 
+  // AI Assistant (ai_sheets.dart): on only when the server has AI set up. _aiDraft: the message box holds an AI Reply
+  // the person already confirmed ("Send this AI reply?" → Edit first); it is sent from here as an AI reply.
+  bool _aiOn = false;
+  bool _aiDraft = false;
+
   // Suggestions above the composer: quick replies after "/", teammates after "@" (notes)
   List<QuickReply> _quick = [];
   List<WorkspaceMember> _mentionChoices = [];
@@ -101,6 +107,9 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     chat.addListener(_onChatChanged);
     _text.addListener(_onTextChanged);
+    context.read<Session>().repo.aiConfigured().then((on) {
+      if (mounted && on) setState(() => _aiOn = true);
+    });
   }
 
   /// The list key of a row (also used by findChildIndexCallback in _list)
@@ -182,6 +191,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _onTextChanged() {
     final text = _text.text;
+    if (_aiDraft && text.trim().isEmpty) _aiDraft = false;
     if (!_noteMode && _editing == null) chat.typed(text);
     // "/" at the start: quick replies (web: typing / in the message box)
     if (!_noteMode && _editing == null && text.startsWith('/') && !text.contains('\n')) {
@@ -244,17 +254,26 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_editingNote != null) return _saveNoteEdit(text);
     if (_noteMode) return _saveNote(text);
     if (text.isEmpty) return;
+    await _sendText(text, aiGenerated: _aiDraft);
+  }
+
+  /// A reply to the customer (the message box, or a confirmed AI Reply); aiGenerated marks it as written with AI
+  Future<void> _sendText(String text, {bool aiGenerated = false}) async {
     final reply = _replyTo;
     _text.clear();
-    setState(() => _replyTo = null);
+    setState(() {
+      _replyTo = null;
+      _aiDraft = false;
+    });
     chat.stopTyping();
     try {
       _toBottom();
-      await chat.sendText(text, replyTo: reply);
+      await chat.sendText(text, replyTo: reply, aiGenerated: aiGenerated);
     } catch (e) {
       if (!mounted) return;
       if (isWindowClosedError(e)) {
         _text.text = text; // nothing is lost: the text stays for after a template
+        _aiDraft = aiGenerated;
         showMessage(context, '24-hour window closed. Send an approved template instead.', error: true);
       } else if (e is ApiException && e.code == 'NOT_ASSIGNED') {
         showError(context, e);
@@ -794,7 +813,37 @@ class _ChatScreenState extends State<ChatScreen> {
         _toBottom();
       case 'search':
         setState(() => _searchOpen = true);
+      case 'ai-summary':
+        await showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (_) => AiSummarySheet(conversationId: c.id),
+        );
+      case 'ai-reply':
+        await _aiReply(c);
     }
+  }
+
+  /// AI Reply: a suggestion to edit; after "Send this AI reply?" it's sent (Send) or put in the message box (Edit first)
+  Future<void> _aiReply(Conversation c) async {
+    final choice = await showModalBottomSheet<AiReplyChoice>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AiReplySheet(
+        conversationId: c.id,
+        blocked: chat.isWindowOpen ? null : '24-hour window closed: only an approved template can be sent until the customer writes again.',
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice.send) return _sendText(choice.text, aiGenerated: true);
+    _text.value = TextEditingValue(text: choice.text, selection: TextSelection.collapsed(offset: choice.text.length));
+    setState(() {
+      _noteMode = false;
+      _aiDraft = true; // already confirmed: sending it from the message box won't ask again
+    });
+    _focus.requestFocus();
   }
 
   // ---------------------------------------------------------------- Build
@@ -917,6 +966,7 @@ class _ChatScreenState extends State<ChatScreen> {
           itemBuilder: (_) => [
             const PopupMenuItem(value: 'contact', child: Text('Contact info')),
             const PopupMenuItem(value: 'search', child: Text('Search in chat')),
+            if (_aiOn) const PopupMenuItem(value: 'ai-summary', child: Text('AI Summary')),
             if (c?.assignee == null) const PopupMenuItem(value: 'claim', child: Text('Assign to me')),
             PopupMenuItem(value: 'assign', child: Text(session.canManageAssignments ? 'Assign…' : 'Assigned to…')),
             const PopupMenuItem(value: 'labels', child: Text('Labels')),
@@ -1163,6 +1213,17 @@ class _ChatScreenState extends State<ChatScreen> {
                   onClose: () => setState(() => _replyTo = null),
                 ),
               ),
+            if (_aiDraft && !_noteMode && !editingSomething)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 15, color: Color(0xFF2563EB)),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text('AI reply · sent as written with AI', style: TextStyle(fontSize: 12.5, color: colors.meta))),
+                  ],
+                ),
+              ),
             if (_noteMode && _noteFiles.isNotEmpty)
               SizedBox(
                 height: 40,
@@ -1186,17 +1247,33 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: const EdgeInsets.only(bottom: 4, left: 4),
                 child: Row(
                   children: [
-                    _modeChip('Reply', !_noteMode, () => setState(() => _noteMode = false), enabled: chat.canReply && chat.isWindowOpen),
-                    const SizedBox(width: 6),
-                    _modeChip(
-                      'Add note',
-                      _noteMode,
-                      () => setState(() {
-                        _noteMode = true;
-                        _replyTo = null;
-                      }),
+                    // Scrolls sideways on a narrow phone when the AI chips are there too
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _modeChip('Reply', !_noteMode, () => setState(() => _noteMode = false), enabled: chat.canReply && chat.isWindowOpen),
+                            const SizedBox(width: 6),
+                            _modeChip(
+                              'Add note',
+                              _noteMode,
+                              () => setState(() {
+                                _noteMode = true;
+                                _replyTo = null;
+                                _aiDraft = false; // a note is never an AI reply
+                              }),
+                            ),
+                            if (_aiOn) ...[
+                              const SizedBox(width: 6),
+                              _aiChip('AI Reply', Icons.auto_awesome, chat.canReply && chat.isWindowOpen ? () => _aiReply(c) : null),
+                              const SizedBox(width: 6),
+                              _aiChip('AI Summary', Icons.summarize_outlined, () => _menu('ai-summary')),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
-                    const Spacer(),
                     if (showCounter)
                       Text(
                         '${text.length} / $_limit',
@@ -1278,6 +1355,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   String _elapsed(Duration d) => '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+
+  /// AI Reply / AI Summary: open a sheet (ai_sheets.dart); null onTap = not available now
+  Widget _aiChip(String label, IconData icon, VoidCallback? onTap) => ActionChip(
+    avatar: Icon(icon, size: 16, color: onTap == null ? null : const Color(0xFF2563EB)),
+    label: Text(label, style: const TextStyle(fontSize: 12.5)),
+    visualDensity: VisualDensity.compact,
+    onPressed: onTap,
+  );
 
   Widget _modeChip(String label, bool selected, VoidCallback onTap, {bool enabled = true}) => ChoiceChip(
     label: Text(label, style: const TextStyle(fontSize: 12.5)),

@@ -8,25 +8,42 @@ META_*, SMTP_*) stay in `server/.env` and never go into the app.
 | `dev.json` | Also the live website for now (`https://connect.tyrescart.ae`). To use a local server again, put its website address here, e.g. `http://192.168.1.16:4000`. |
 | `prod.json` | **Live**: the live website, `https://connect.tyrescart.ae` (not committed). |
 | `demo.json` | **Demo**: the demo website, `https://support.tyrescart.ae` (not committed). Same Firebase settings as `prod.json`. |
+| `crm.json` | **CRM**: the CRM website, `https://crm.tyrescart.ae` (not committed). No Firebase settings yet, so push is off in this build. |
 | `prod.example.json` | Template for `prod.json`. |
 
 Always the website's address, never the API's own port: the app's live connection uses `/socket.io` without a trailing
 slash, which the website (Next.js locally, nginx live) serves; the API port alone only answers `/socket.io/`.
 
+Each server is its own build flavor (`live`, `demo`, `crm`) with its own app id, so all three install side by side on
+one phone. Always pair the flavor with its env file:
+
+| Flavor | Env file | Android app id | iOS bundle id |
+|---|---|---|---|
+| `live` (default) | `prod.json` | `tech.synex.tyrescart_support` | `tech.synex.tyrescartSupport` |
+| `demo` | `demo.json` | `tech.synex.tyrescart_support.demo` | `tech.synex.tyrescartSupport.demo` |
+| `crm` | `crm.json` | `tech.synex.tyrescart_support.crm` | `tech.synex.tyrescartSupport.crm` |
+
 ```bash
 # Live (real customers and data)
-flutter build apk --release --dart-define-from-file=env/prod.json         # live APK (HTTPS only)
+flutter build apk --release --flavor live --dart-define-from-file=env/prod.json   # → app-live-release.apk
 
 # Demo (demo server and data)
-flutter run --dart-define-from-file=env/demo.json                         # run on a phone/emulator
-flutter build apk --release --dart-define-from-file=env/demo.json         # demo APK
+flutter run --flavor demo --dart-define-from-file=env/demo.json                   # run on a phone/emulator
+flutter build apk --release --flavor demo --dart-define-from-file=env/demo.json   # → app-demo-release.apk
 
-flutter run --dart-define-from-file=env/dev.json                          # development (live server for now)
+# CRM (https://crm.tyrescart.ae)
+flutter run --flavor crm --dart-define-from-file=env/crm.json
+flutter build apk --release --flavor crm --dart-define-from-file=env/crm.json     # → app-crm-release.apk
+
+# iOS: the same flavors are Xcode schemes (live, demo, crm)
+flutter build ipa --flavor crm --dart-define-from-file=env/crm.json
+
+flutter run --dart-define-from-file=env/dev.json                                  # development (no --flavor = live)
 ```
 
-Both builds write `build/app/outputs/flutter-apk/app-release.apk`: copy or rename it after each build so the live and
-demo APKs don't overwrite each other. Live and demo builds are the same app (`tech.synex.tyrescart_support`):
-installing one replaces the other on a phone.
+Each flavor writes its own APK (`build/app/outputs/flutter-apk/app-<flavor>-release.apk`). `tool/build_apks.sh [flavor…]`
+builds them and keeps a copy named after the app and the day, e.g. `apks/2026-10-31/TyresVision-CRM_2026-10-31.apk`. Push for `demo` and `crm`
+needs their own app ids registered in Firebase (Android and iOS apps), with those settings in their env file.
 
 ## Push notifications (Firebase)
 

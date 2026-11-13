@@ -314,9 +314,10 @@ class ChatController extends ChangeNotifier {
     }
   }
 
-  Future<bool> sendText(String text, {Message? replyTo}) => _send(
+  /// aiGenerated: written with AI Reply and confirmed by the person (the server marks it ai_reply)
+  Future<bool> sendText(String text, {Message? replyTo, bool aiGenerated = false}) => _send(
         PendingSend(localId: _localId(), kind: 'text', text: text, replyTo: _quote(replyTo)),
-        () => session.repo.sendText(conversationId, text, replyToId: replyTo?.id),
+        () => session.repo.sendText(conversationId, text, replyToId: replyTo?.id, aiGenerated: aiGenerated),
       );
 
   Future<bool> sendFile({required Uint8List bytes, required String mime, required bool image, required String name, String caption = '', Message? replyTo}) => _send(

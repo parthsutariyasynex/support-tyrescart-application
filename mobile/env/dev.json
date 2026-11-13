@@ -1,3 +1,4 @@
 {
-  "API_BASE_URL": "https://connect.tyrescart.ae"
+  "API_BASE_URL": "https://crm.tyresvision.com",
+  "APP_NAME": "TyresVision CRM"
 }

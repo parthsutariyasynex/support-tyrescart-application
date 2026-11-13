@@ -29,6 +29,27 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appName"] = "TyresVision CRM"
+    }
+
+    // One flavor per server (see env/README.md), each its own app id so all three install side by side. Live keeps the
+    // original id (existing installs update in place, Firebase push matches google-services.json).
+    flavorDimensions += "server"
+    productFlavors {
+        create("live") {
+            dimension = "server"
+            manifestPlaceholders["appName"] = "TyresVision CRM"
+        }
+        create("demo") {
+            dimension = "server"
+            applicationIdSuffix = ".demo"
+            manifestPlaceholders["appName"] = "TyresCart Demo"
+        }
+        create("crm") {
+            dimension = "server"
+            applicationIdSuffix = ".crm"
+            manifestPlaceholders["appName"] = "TyresCart CRM"
+        }
     }
 
     buildTypes {
